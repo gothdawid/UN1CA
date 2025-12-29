@@ -80,4 +80,34 @@ jobs:
       - name: Build ROM
         run: |
           source ./buildenv.sh ${{ matrix.target }}
-          ./scripts/make_rom.sh --no-rom-zip
+          ./scripts/make_rom.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v6
+        continue-on-error: true
+        with:
+          name: rom-${{ matrix.target }}
+          path: |
+            out/target/**/*.zip
+          retention-days: 7
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: always()
+        continue-on-error: true
+        with:
+          files: |
+            out/target/**/*.zip
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated build for target: ${{ matrix.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Pages
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir public
+          cp out/target/**/*.zip public/
+          echo "<a href=\"$(ls public/*.zip | xargs basename)\">Download ROM</a>" > public/index.html
